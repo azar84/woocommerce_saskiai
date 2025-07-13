@@ -232,6 +232,7 @@ class WooCommerceClient:
                     filter_email = params.pop('email').strip().lower()
                 if 'order_number' in params:
                     filter_order_number = str(params.pop('order_number')).strip().lower()
+                # 'customer' param is left in params to be sent to the API for server-side filtering
             # -------------------------------------------------------------
             
             # Handle specific ID requests by modifying the endpoint URL
@@ -313,6 +314,16 @@ class WooCommerceClient:
                 elif isinstance(response_data, dict) and response_data.get("id"):
                     response_data = filter_product_fields(response_data)
             # --- End filter product fields ---
+
+            # --- Remove _links from customers ---
+            if endpoint_type == 'customers':
+                if isinstance(response_data, list):
+                    for customer in response_data:
+                        if '_links' in customer:
+                            del customer['_links']
+                elif isinstance(response_data, dict) and '_links' in response_data:
+                    del response_data['_links']
+            # --- End remove _links ---
 
             return {
                 'success': True,

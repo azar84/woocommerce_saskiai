@@ -174,7 +174,7 @@
                             
                             <!-- Email Filter -->
                             <div class="filter-group" style="margin-bottom: 1rem;">
-                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">✉️ Customer Email</label>
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">✉️ Billing Email</label>
                                 <input type="email" placeholder="Customer email" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('email', this.value)">
                             </div>
                             
@@ -182,6 +182,12 @@
                             <div class="filter-group" style="margin-bottom: 1rem;">
                                 <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">#️⃣ Order Number</label>
                                 <input type="text" placeholder="Order number or ID" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('order_number', this.value)">
+                            </div>
+                            
+                            <!-- Customer ID Filter -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">👤 Customer ID</label>
+                                <input type="number" placeholder="Customer ID" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('customer', this.value)">
                             </div>
                             
                             <div class="filter-group" style="margin-bottom: 1rem;">
@@ -203,6 +209,11 @@
                         <div id="customersFilters" class="endpoint-filter-section" style="display: none;">
                             <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #64748B;">Customer-Specific Filters:</h4>
                             
+                            <!-- Email Filter -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">✉️ Email</label>
+                                <input type="email" placeholder="Customer email" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('email', this.value)">
+                            </div>
                             <div class="filter-group" style="margin-bottom: 1rem;">
                                 <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">👤 Customer Role</label>
                                 <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('role', this.value)">
