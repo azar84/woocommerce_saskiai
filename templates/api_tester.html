@@ -1,0 +1,1117 @@
+{% extends "base.html" %}
+
+{% block title %}API Tester - Saski AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-text">
+            <h1>
+                <i class="mdi mdi-api"></i>
+                WooCommerce API Tester
+            </h1>
+            <p>Test and explore your WooCommerce API endpoints with custom search parameters</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('logs_page') }}" class="btn btn-outline">
+                <i class="mdi mdi-history"></i>
+                View Logs
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if stores %}
+        <div class="api-tester">
+            <!-- API Testing Form -->
+            <div class="tester-form">
+                <div class="form-section">
+                    <h3>
+                        <i class="mdi mdi-cog"></i>
+                        Test Configuration
+                    </h3>
+                    
+                    <form id="apiTestForm">
+                        <div class="form-group">
+                            <label for="storeSelect">Select Store</label>
+                            <select id="storeSelect" name="store_id" required>
+                                <option value="">Choose a store...</option>
+                                {% for store in stores %}
+                                <option value="{{ store.id }}">{{ store.store_name }} - {{ store.store_url }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endpointSelect">API Endpoint</label>
+                            <select id="endpointSelect" name="endpoint_type" required onchange="showEndpointSpecificFilters()">
+                                <option value="">Select endpoint...</option>
+                                <option value="orders">Orders (/wp-json/wc/v3/orders)</option>
+                                <option value="products">Products (/wp-json/wc/v3/products)</option>
+                                <option value="customers">Customers (/wp-json/wc/v3/customers)</option>
+                                <option value="settings">Settings (/wp-json/wc/v3/settings)</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Search Parameters -->
+                <div class="form-section">
+                    <h3>
+                        <i class="mdi mdi-magnify"></i>
+                        Search Parameters
+                        <button type="button" class="btn btn-outline btn-sm" onclick="showParameterHelp()">
+                            <i class="mdi mdi-help-circle"></i>
+                            Help
+                        </button>
+                    </h3>
+                    
+                    <div class="parameter-inputs" id="parameterInputs">
+                        <div class="parameter-input">
+                            <input type="text" placeholder="Parameter name (e.g., search)" class="param-name">
+                            <input type="text" placeholder="Value" class="param-value">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="removeParameter(this)">
+                                <i class="mdi mdi-close"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="parameter-actions">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="addParameter()">
+                            <i class="mdi mdi-plus"></i>
+                            Add Parameter
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="clearParameters()">
+                            <i class="mdi mdi-delete"></i>
+                            Clear All
+                        </button>
+                    </div>
+                    
+                    <!-- Endpoint-Specific Filters -->
+                    <div id="endpointFilters" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #E2E8F0; display: none;">
+                        
+                        <!-- Products Filters -->
+                        <div id="productsFilters" class="endpoint-filter-section" style="display: none;">
+                            <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #64748B;">Product-Specific Filters:</h4>
+                            
+                            <!-- Price Range -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">💰 Price Range</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="number" placeholder="Min price" class="form-input" style="flex: 1; font-size: 0.8rem;" onchange="updateParam('min_price', this.value)">
+                                    <span style="color: #64748B;">to</span>
+                                    <input type="number" placeholder="Max price" class="form-input" style="flex: 1; font-size: 0.8rem;" onchange="updateParam('max_price', this.value)">
+                                </div>
+                            </div>
+                            
+                            <!-- Stock Status -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">📦 Stock Status</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('stock_status', this.value)">
+                                    <option value="">Any stock status</option>
+                                    <option value="instock">In Stock</option>
+                                    <option value="outofstock">Out of Stock</option>
+                                    <option value="onbackorder">On Backorder</option>
+                                </select>
+                            </div>
+                            
+                            <!-- On Sale -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">🏷️ Sale Status</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('on_sale', this.value)">
+                                    <option value="">Any sale status</option>
+                                    <option value="true">On Sale</option>
+                                    <option value="false">Regular Price</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Featured -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">⭐ Featured Status</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('featured', this.value)">
+                                    <option value="">Any featured status</option>
+                                    <option value="true">Featured Products</option>
+                                    <option value="false">Regular Products</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Rating -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">⭐ Minimum Rating</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('average_rating', this.value)">
+                                    <option value="">Any rating</option>
+                                    <option value="1">1+ stars</option>
+                                    <option value="2">2+ stars</option>
+                                    <option value="3">3+ stars</option>
+                                    <option value="4">4+ stars</option>
+                                    <option value="5">5 stars only</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Category -->
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">📂 Category</label>
+                                <input type="text" placeholder="Category slug or ID (e.g., fitness, hoodies)" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('category', this.value)">
+                            </div>
+                            
+                                                         <!-- Tags -->
+                             <div class="filter-group" style="margin-bottom: 1rem;">
+                                 <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">🏷️ Tags</label>
+                                 <input type="text" placeholder="Tag slug or ID (e.g., winter, summer)" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('tag', this.value)">
+                             </div>
+                             
+                             <!-- Search Keywords -->
+                             <div class="filter-group" style="margin-bottom: 1rem;">
+                                 <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">🔍 Search Keywords</label>
+                                 <input type="text" placeholder="Search in name/description (e.g., red sweatshirt)" class="form-input" style="font-size: 0.8rem;" onchange="updateParam('search', this.value)">
+                             </div>
+                        </div>
+                        
+                        <!-- Orders Filters -->
+                        <div id="ordersFilters" class="endpoint-filter-section" style="display: none;">
+                            <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #64748B;">Order-Specific Filters:</h4>
+                            
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">📊 Order Status</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('status', this.value)">
+                                    <option value="">Any status</option>
+                                    <option value="pending">Pending Payment</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="on-hold">On Hold</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="refunded">Refunded</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Customers Filters -->
+                        <div id="customersFilters" class="endpoint-filter-section" style="display: none;">
+                            <h4 style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #64748B;">Customer-Specific Filters:</h4>
+                            
+                            <div class="filter-group" style="margin-bottom: 1rem;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; display: block;">👤 Customer Role</label>
+                                <select class="form-input" style="font-size: 0.8rem;" onchange="updateParam('role', this.value)">
+                                    <option value="">Any role</option>
+                                    <option value="customer">Customer</option>
+                                    <option value="subscriber">Subscriber</option>
+                                    <option value="administrator">Administrator</option>
+                                    <option value="shop_manager">Shop Manager</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="testEndpoint()">
+                            <i class="mdi mdi-play"></i>
+                            Test API Endpoint
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h3>
+                        <i class="mdi mdi-code-json"></i>
+                        API Response
+                    </h3>
+                    <div class="results-actions">
+                        <button class="btn btn-outline btn-sm" onclick="copyResults()">
+                            <i class="mdi mdi-content-copy"></i>
+                            Copy JSON
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="clearResults()">
+                            <i class="mdi mdi-close"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="results-content">
+                    <div class="results-summary" id="resultsSummary">
+                        <!-- Summary will be populated here -->
+                    </div>
+                    
+                    <div class="results-data" id="resultsData">
+                        <!-- JSON data will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state large">
+            <div class="empty-icon">
+                <i class="mdi mdi-api-off"></i>
+            </div>
+            <h2>No stores connected</h2>
+            <p>Connect a WooCommerce store first to test API endpoints.</p>
+            <div class="empty-actions">
+                <a href="{{ url_for('connect_page') }}" class="btn btn-primary">
+                    <i class="mdi mdi-plus"></i>
+                    Connect Store
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Parameter Help Modal -->
+<div id="parameterHelpModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="mdi mdi-help-circle"></i>
+                API Parameter Guide
+            </h3>
+            <button class="modal-close" onclick="hideParameterHelp()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="parameter-guide">
+                <div class="endpoint-params">
+                    <h4>Orders Parameters</h4>
+                    <ul>
+                        <li><code>id</code> - Get a specific order by ID (e.g., id: 123)</li>
+                        <li><code>search</code> - Search by customer name, email, or order number</li>
+                        <li><code>status</code> - Order status (pending, processing, completed, etc.)</li>
+                        <li><code>per_page</code> - Number of results (1-100, default: 10)</li>
+                        <li><code>page</code> - Page number for pagination</li>
+                        <li><code>orderby</code> - Sort by date, id, include, title, slug</li>
+                        <li><code>order</code> - Sort direction (asc, desc)</li>
+                    </ul>
+                    
+                    <h4>Products Parameters</h4>
+                    <ul>
+                        <li><code>id</code> - Get a specific product by ID (e.g., id: 123)</li>
+                        <li><code>search</code> - Search products by name or description</li>
+                        <li><code>category</code> - Filter by category ID or slug</li>
+                        <li><code>tag</code> - Filter by tag ID or slug</li>
+                        <li><code>sku</code> - Filter by SKU</li>
+                        <li><code>status</code> - Product status (publish, draft, private)</li>
+                        <li><code>type</code> - Product type (simple, grouped, external, variable)</li>
+                        <li><code>featured</code> - Featured products (true/false)</li>
+                        <li><code>on_sale</code> - Products on sale (true/false)</li>
+                        <li><code>min_price</code> - Minimum price filter</li>
+                        <li><code>max_price</code> - Maximum price filter</li>
+                        <li><code>stock_status</code> - Stock status (instock, outofstock, onbackorder)</li>
+                        <li><code>average_rating</code> - Minimum average rating (1-5)</li>
+                        <li><code>per_page</code> - Number of results (1-100, default: 10)</li>
+                        <li><code>page</code> - Page number for pagination</li>
+                        <li><code>orderby</code> - Sort by (date, id, menu_order, popularity, rating, title, price)</li>
+                        <li><code>order</code> - Sort direction (asc, desc)</li>
+                    </ul>
+                    
+                    <h4>Customers Parameters</h4>
+                    <ul>
+                        <li><code>id</code> - Get a specific customer by ID (e.g., id: 123)</li>
+                        <li><code>search</code> - Search by name, email, or username</li>
+                        <li><code>email</code> - Filter by specific email address</li>
+                        <li><code>role</code> - Filter by user role</li>
+                        <li><code>orderby</code> - Sort by id, include, name, registered_date</li>
+                    </ul>
+                    
+                    <h4>Settings Parameters</h4>
+                    <ul>
+                        <li>No search parameters - Returns all WooCommerce settings</li>
+                        <li>Settings are read-only in this interface</li>
+                    </ul>
+                </div>
+                
+                <div class="parameter-examples">
+                    <h4>Example Queries</h4>
+                    
+                    <div class="example">
+                        <strong>Get specific product by ID:</strong><br>
+                        Parameter: <code>id</code>, Value: <code>123</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Show me hoodies under $100:</strong><br>
+                        Parameter: <code>search</code>, Value: <code>hoodie</code><br>
+                        Parameter: <code>max_price</code>, Value: <code>100</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>What's on sale today:</strong><br>
+                        Parameter: <code>on_sale</code>, Value: <code>true</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Do you have anything in stock:</strong><br>
+                        Parameter: <code>stock_status</code>, Value: <code>instock</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Show me winter wear (by tag):</strong><br>
+                        Parameter: <code>tag</code>, Value: <code>winter</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Show me Nike products (by brand):</strong><br>
+                        Parameter: <code>brands</code>, Value: <code>nike</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>What are your best-rated products:</strong><br>
+                        Parameter: <code>average_rating</code>, Value: <code>4</code><br>
+                        Parameter: <code>orderby</code>, Value: <code>rating</code><br>
+                        Parameter: <code>order</code>, Value: <code>desc</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>What are your featured items:</strong><br>
+                        Parameter: <code>featured</code>, Value: <code>true</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Do you have red sweatshirts:</strong><br>
+                        Parameter: <code>search</code>, Value: <code>red sweatshirt</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Price range $50-$200:</strong><br>
+                        Parameter: <code>min_price</code>, Value: <code>50</code><br>
+                        Parameter: <code>max_price</code>, Value: <code>200</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Find pending orders:</strong><br>
+                        Parameter: <code>status</code>, Value: <code>pending</code>
+                    </div>
+                    
+                    <div class="example">
+                        <strong>Get latest 5 orders:</strong><br>
+                        Parameter: <code>per_page</code>, Value: <code>5</code><br>
+                        Parameter: <code>orderby</code>, Value: <code>date</code><br>
+                        Parameter: <code>order</code>, Value: <code>desc</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="hideParameterHelp()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-content">
+        <div class="loading-spinner">
+            <i class="mdi mdi-loading mdi-spin"></i>
+        </div>
+        <p id="loadingText">Testing API endpoint...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Parameter management
+function addParameter() {
+    const container = document.getElementById('parameterInputs');
+    const parameterDiv = document.createElement('div');
+    parameterDiv.className = 'parameter-input';
+    parameterDiv.innerHTML = `
+        <input type="text" placeholder="Parameter name" class="param-name">
+        <input type="text" placeholder="Value" class="param-value">
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeParameter(this)">
+            <i class="mdi mdi-close"></i>
+        </button>
+    `;
+    container.appendChild(parameterDiv);
+}
+
+function removeParameter(button) {
+    const container = document.getElementById('parameterInputs');
+    if (container.children.length > 1) {
+        button.parentElement.remove();
+    }
+}
+
+function clearParameters() {
+    const container = document.getElementById('parameterInputs');
+    container.innerHTML = `
+        <div class="parameter-input">
+            <input type="text" placeholder="Parameter name (e.g., search)" class="param-name">
+            <input type="text" placeholder="Value" class="param-value">
+            <button type="button" class="btn btn-outline btn-sm" onclick="removeParameter(this)">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+    `;
+    
+    // Clear all filter controls
+    document.querySelectorAll('#endpointFilters input, #endpointFilters select').forEach(input => {
+        input.value = '';
+    });
+}
+
+// Show endpoint-specific filters
+function showEndpointSpecificFilters() {
+    const endpoint = document.getElementById('endpointSelect').value;
+    const endpointFilters = document.getElementById('endpointFilters');
+    
+    // Hide all filter sections first
+    document.querySelectorAll('.endpoint-filter-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    if (endpoint) {
+        endpointFilters.style.display = 'block';
+        
+        // Show specific filter section
+        const filterSection = document.getElementById(endpoint + 'Filters');
+        if (filterSection) {
+            filterSection.style.display = 'block';
+        }
+        
+        // Clear existing parameters
+        clearParameters();
+    } else {
+        endpointFilters.style.display = 'none';
+    }
+}
+
+// Update parameter from filter controls
+function updateParam(paramName, value) {
+    if (!value || value.trim() === '') {
+        removeParamByName(paramName);
+        return;
+    }
+    
+    // Check if parameter already exists
+    const existingParam = findParamByName(paramName);
+    if (existingParam) {
+        existingParam.querySelector('.param-value').value = value;
+    } else {
+        // Add new parameter
+        const container = document.getElementById('parameterInputs');
+        const parameterDiv = document.createElement('div');
+        parameterDiv.className = 'parameter-input';
+        parameterDiv.innerHTML = `
+            <input type="text" placeholder="Parameter name" class="param-name" value="${paramName}" readonly>
+            <input type="text" placeholder="Value" class="param-value" value="${value}">
+            <button type="button" class="btn btn-outline btn-sm" onclick="removeParameter(this)">
+                <i class="mdi mdi-close"></i>
+            </button>
+        `;
+        container.appendChild(parameterDiv);
+    }
+}
+
+// Find parameter by name
+function findParamByName(paramName) {
+    const paramInputs = document.querySelectorAll('.parameter-input');
+    for (let input of paramInputs) {
+        if (input.querySelector('.param-name').value === paramName) {
+            return input;
+        }
+    }
+    return null;
+}
+
+// Remove parameter by name
+function removeParamByName(paramName) {
+    const paramInput = findParamByName(paramName);
+    if (paramInput) {
+        paramInput.remove();
+    }
+}
+
+
+
+// Collect parameters from form
+function getSearchParameters() {
+    const parameters = {};
+    const parameterInputs = document.querySelectorAll('.parameter-input');
+    
+    parameterInputs.forEach(input => {
+        const nameInput = input.querySelector('.param-name');
+        const valueInput = input.querySelector('.param-value');
+        
+        if (nameInput.value.trim() && valueInput.value.trim()) {
+            parameters[nameInput.value.trim()] = valueInput.value.trim();
+        }
+    });
+    
+    return parameters;
+}
+
+// Test API endpoint
+async function testEndpoint() {
+    const storeId = document.getElementById('storeSelect').value;
+    const endpointType = document.getElementById('endpointSelect').value;
+    
+    if (!storeId || !endpointType) {
+        showToast('error', 'Please select both a store and an endpoint');
+        return;
+    }
+    
+    const searchParams = getSearchParameters();
+    
+    // Show loading
+    showLoading('Testing API endpoint...');
+    
+    try {
+        const response = await fetch('/api/test-endpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                store_id: parseInt(storeId),
+                endpoint_type: endpointType,
+                search_params: searchParams
+            })
+        });
+        
+        const result = await response.json();
+        
+        hideLoading();
+        displayResults(result);
+        
+        if (result.success) {
+            showToast('success', `Successfully tested ${endpointType} endpoint`);
+        } else {
+            showToast('error', `API test failed: ${result.message}`);
+        }
+        
+    } catch (error) {
+        hideLoading();
+        showToast('error', `Network error: ${error.message}`);
+        console.error('API test error:', error);
+    }
+}
+
+// Display results
+function displayResults(result) {
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsSummary = document.getElementById('resultsSummary');
+    const resultsData = document.getElementById('resultsData');
+    
+    // Show results section
+    resultsSection.style.display = 'block';
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
+    
+    // Create summary
+    const summaryHtml = `
+        <div class="summary-cards">
+            <div class="summary-card ${result.success ? 'success' : 'error'}">
+                <div class="summary-icon">
+                    <i class="mdi mdi-${result.success ? 'check-circle' : 'alert-circle'}"></i>
+                </div>
+                <div class="summary-content">
+                    <h4>${result.success ? 'Success' : 'Failed'}</h4>
+                    <p>${result.message}</p>
+                </div>
+            </div>
+            
+            ${result.success ? `
+                <div class="summary-card">
+                    <div class="summary-icon">
+                        <i class="mdi mdi-database"></i>
+                    </div>
+                    <div class="summary-content">
+                        <h4>${result.count || 0}</h4>
+                        <p>Records returned</p>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="summary-icon">
+                        <i class="mdi mdi-api"></i>
+                    </div>
+                    <div class="summary-content">
+                        <h4>${result.endpoint_type}</h4>
+                        <p>Endpoint tested</p>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        
+        ${result.endpoint ? `
+            <div class="endpoint-info">
+                <strong>Endpoint:</strong> <code>${result.endpoint}</code><br>
+                <strong>Parameters:</strong> <code>${JSON.stringify(result.search_params || {})}</code>
+            </div>
+        ` : ''}
+    `;
+    
+    resultsSummary.innerHTML = summaryHtml;
+    
+    // Display formatted data
+    if (result.success && result.data) {
+        resultsData.innerHTML = formatDataForDisplay(result.endpoint_type, result.data);
+    } else {
+        // Show error data or raw JSON
+        const jsonData = result.success ? (result.data || result) : result;
+        resultsData.innerHTML = `
+            <div class="json-container">
+                <h4>Raw Response</h4>
+                <pre><code class="json-code">${JSON.stringify(jsonData, null, 2)}</code></pre>
+            </div>
+        `;
+    }
+}
+
+// Format data for different endpoint types
+function formatDataForDisplay(endpointType, data) {
+    if (!Array.isArray(data)) {
+        return `<pre><code class="json-code">${JSON.stringify(data, null, 2)}</code></pre>`;
+    }
+
+    switch (endpointType) {
+        case 'orders':
+            return formatOrdersData(data);
+        case 'products':
+            return formatProductsData(data);
+        case 'customers':
+            return formatCustomersData(data);
+        case 'settings':
+            return formatSettingsData(data);
+        default:
+            return `<pre><code class="json-code">${JSON.stringify(data, null, 2)}</code></pre>`;
+    }
+}
+
+// Format orders data
+function formatOrdersData(orders) {
+    if (!orders.length) {
+        return '<div class="no-data">No orders found</div>';
+    }
+
+    const orderRows = orders.map(order => {
+        // Format payment method
+        const paymentMethod = order.payment_method_title || order.payment_method || 'N/A';
+        
+        // Format shipping info
+        const shippingInfo = order.shipping?.first_name 
+            ? `${order.shipping.first_name} ${order.shipping.last_name}`
+            : 'Same as billing';
+
+        // Format line items
+        const itemCount = order.line_items ? order.line_items.length : 0;
+        const firstItem = order.line_items && order.line_items[0] ? order.line_items[0].name : '';
+
+        // Calculate totals
+        const subtotal = order.subtotal || '0.00';
+        const tax = order.total_tax || '0.00';
+        const shipping = order.shipping_total || '0.00';
+
+        return `
+            <div class="data-row">
+                <div class="data-main">
+                    <div class="data-title">
+                        <span class="data-id">#${order.id}</span>
+                        <span class="data-status status-${order.status}">${order.status}</span>
+                        ${order.meta_data?.some(meta => meta.key === '_wc_order_attribution_source_type' && meta.value === 'organic') ? '<span class="featured-tag">ORGANIC</span>' : ''}
+                    </div>
+                    <div class="data-details">
+                        <div class="detail-row">
+                            <span><strong>Customer:</strong> ${order.billing?.first_name || ''} ${order.billing?.last_name || ''}</span>
+                            <span><strong>Email:</strong> ${order.billing?.email || 'N/A'}</span>
+                            <span><strong>Phone:</strong> ${order.billing?.phone || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Total:</strong> ${order.currency_symbol || '$'}${order.total}</span>
+                            <span><strong>Subtotal:</strong> ${order.currency_symbol || '$'}${subtotal}</span>
+                            <span><strong>Tax:</strong> ${order.currency_symbol || '$'}${tax}</span>
+                            <span><strong>Shipping:</strong> ${order.currency_symbol || '$'}${shipping}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Items:</strong> ${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+                            <span><strong>Payment:</strong> ${paymentMethod}</span>
+                            <span><strong>Created:</strong> ${new Date(order.date_created).toLocaleDateString()}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Shipping To:</strong> ${shippingInfo}</span>
+                            <span><strong>City:</strong> ${order.shipping?.city || order.billing?.city || 'N/A'}</span>
+                            <span><strong>Country:</strong> ${order.shipping?.country || order.billing?.country || 'N/A'}</span>
+                        </div>
+                        ${firstItem ? `
+                            <div class="detail-description">
+                                <strong>First Item:</strong> ${firstItem}${itemCount > 1 ? ` (+${itemCount - 1} more)` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="data-actions">
+                    <button class="btn btn-outline btn-sm" onclick="viewOrderDetails(${order.id})">
+                        <i class="mdi mdi-eye"></i> Details
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="viewRawData(${JSON.stringify(order).replace(/"/g, '&quot;')})">
+                        <i class="mdi mdi-code-json"></i> Raw
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="formatted-data">
+            <div class="data-header">
+                <h4>Orders (${orders.length})</h4>
+                <div class="view-toggles">
+                    <button class="btn btn-outline btn-sm active" onclick="toggleDataView('formatted', this)">
+                        <i class="mdi mdi-view-list"></i> Formatted
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleDataView('raw', this)">
+                        <i class="mdi mdi-code-json"></i> Raw JSON
+                    </button>
+                </div>
+            </div>
+            <div class="formatted-view">
+                <div class="data-rows">
+                    ${orderRows}
+                </div>
+            </div>
+            <div class="raw-view hidden">
+                <pre><code class="json-code">${JSON.stringify(orders, null, 2)}</code></pre>
+            </div>
+        </div>
+    `;
+}
+
+// Format products data
+function formatProductsData(products) {
+    if (!products.length) {
+        return '<div class="no-data">No products found</div>';
+    }
+
+    const productRows = products.map(product => {
+        // Format categories
+        const categories = product.categories && product.categories.length > 0 
+            ? product.categories.map(cat => cat.name).join(', ')
+            : 'N/A';
+
+        // Format stock status
+        const stockInfo = product.manage_stock 
+            ? `${product.stock_quantity || 0} (${product.stock_status})`
+            : product.stock_status || 'N/A';
+
+        // Format price display
+        const priceDisplay = product.sale_price 
+            ? `<span class="sale-price">$${product.sale_price}</span> <span class="regular-price">$${product.regular_price}</span>`
+            : `$${product.price}`;
+
+        // Check if product is on sale
+        const saleTag = product.sale_price ? '<span class="sale-tag">SALE</span>' : '';
+
+        return `
+            <div class="data-row">
+                <div class="data-main">
+                    <div class="data-title">
+                        <span class="data-name">${product.name}</span>
+                        <span class="data-status status-${product.status}">${product.status}</span>
+                        ${saleTag}
+                        ${product.featured ? '<span class="featured-tag">FEATURED</span>' : ''}
+                    </div>
+                    <div class="data-details">
+                        <div class="detail-row">
+                            <span><strong>ID:</strong> ${product.id}</span>
+                            <span><strong>SKU:</strong> ${product.sku || 'N/A'}</span>
+                            <span><strong>Type:</strong> ${product.type}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Price:</strong> ${priceDisplay}</span>
+                            <span><strong>Stock:</strong> ${stockInfo}</span>
+                            <span><strong>Weight:</strong> ${product.weight || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Categories:</strong> ${categories}</span>
+                            <span><strong>Created:</strong> ${new Date(product.date_created).toLocaleDateString()}</span>
+                        </div>
+                        ${product.short_description ? `
+                            <div class="detail-description">
+                                <strong>Description:</strong> ${product.short_description.replace(/<[^>]*>/g, '').substring(0, 100)}${product.short_description.length > 100 ? '...' : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="data-actions">
+                    <button class="btn btn-outline btn-sm" onclick="viewProductDetails(${product.id})">
+                        <i class="mdi mdi-eye"></i> Details
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="viewRawData(${JSON.stringify(product).replace(/"/g, '&quot;')})">
+                        <i class="mdi mdi-code-json"></i> Raw
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="formatted-data">
+            <div class="data-header">
+                <h4>Products (${products.length})</h4>
+                <div class="view-toggles">
+                    <button class="btn btn-outline btn-sm active" onclick="toggleDataView('formatted', this)">
+                        <i class="mdi mdi-view-list"></i> Formatted
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleDataView('raw', this)">
+                        <i class="mdi mdi-code-json"></i> Raw JSON
+                    </button>
+                </div>
+            </div>
+            <div class="formatted-view">
+                <div class="data-rows">
+                    ${productRows}
+                </div>
+            </div>
+            <div class="raw-view hidden">
+                <pre><code class="json-code">${JSON.stringify(products, null, 2)}</code></pre>
+            </div>
+        </div>
+    `;
+}
+
+// Format customers data
+function formatCustomersData(customers) {
+    if (!customers.length) {
+        return '<div class="no-data">No customers found</div>';
+    }
+
+    const customerRows = customers.map(customer => {
+        // Format billing address
+        const billingAddress = customer.billing ? 
+            `${customer.billing.city || ''}, ${customer.billing.state || ''} ${customer.billing.country || ''}`.replace(/^,\s*/, '') : 'N/A';
+            
+        // Format avatar or initials
+        const initials = customer.first_name && customer.last_name ? 
+            `${customer.first_name.charAt(0)}${customer.last_name.charAt(0)}` : 
+            customer.email ? customer.email.charAt(0).toUpperCase() : '?';
+
+        // Check if customer is recently active
+        const lastOrderDate = customer.last_order ? new Date(customer.last_order.date_created) : null;
+        const isRecentCustomer = lastOrderDate && (Date.now() - lastOrderDate.getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+
+        return `
+            <div class="data-row">
+                <div class="data-main">
+                    <div class="data-title">
+                        <span class="customer-avatar">${initials}</span>
+                        <span class="data-name">${customer.first_name || ''} ${customer.last_name || ''}</span>
+                        <span class="data-role">${customer.role}</span>
+                        ${isRecentCustomer ? '<span class="featured-tag">RECENT</span>' : ''}
+                    </div>
+                    <div class="data-details">
+                        <div class="detail-row">
+                            <span><strong>ID:</strong> ${customer.id}</span>
+                            <span><strong>Username:</strong> ${customer.username || 'N/A'}</span>
+                            <span><strong>Email:</strong> ${customer.email}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Orders:</strong> ${customer.orders_count || 0}</span>
+                            <span><strong>Total Spent:</strong> $${customer.total_spent || '0.00'}</span>
+                            <span><strong>Avg Order:</strong> $${customer.orders_count > 0 ? (parseFloat(customer.total_spent || 0) / customer.orders_count).toFixed(2) : '0.00'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span><strong>Registered:</strong> ${new Date(customer.date_created).toLocaleDateString()}</span>
+                            <span><strong>Location:</strong> ${billingAddress}</span>
+                            <span><strong>Last Modified:</strong> ${new Date(customer.date_modified).toLocaleDateString()}</span>
+                        </div>
+                        ${customer.billing?.phone ? `
+                            <div class="detail-row">
+                                <span><strong>Phone:</strong> ${customer.billing.phone}</span>
+                                <span><strong>Company:</strong> ${customer.billing.company || 'N/A'}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="data-actions">
+                    <button class="btn btn-outline btn-sm" onclick="viewCustomerDetails(${customer.id})">
+                        <i class="mdi mdi-eye"></i> Details
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="viewRawData(${JSON.stringify(customer).replace(/"/g, '&quot;')})">
+                        <i class="mdi mdi-code-json"></i> Raw
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="formatted-data">
+            <div class="data-header">
+                <h4>Customers (${customers.length})</h4>
+                <div class="view-toggles">
+                    <button class="btn btn-outline btn-sm active" onclick="toggleDataView('formatted', this)">
+                        <i class="mdi mdi-view-list"></i> Formatted
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="toggleDataView('raw', this)">
+                        <i class="mdi mdi-code-json"></i> Raw JSON
+                    </button>
+                </div>
+            </div>
+            <div class="formatted-view">
+                <div class="data-rows">
+                    ${customerRows}
+                </div>
+            </div>
+            <div class="raw-view hidden">
+                <pre><code class="json-code">${JSON.stringify(customers, null, 2)}</code></pre>
+            </div>
+        </div>
+    `;
+}
+
+// Format settings data
+function formatSettingsData(settings) {
+    if (!settings.length) {
+        return '<div class="no-data">No settings found</div>';
+    }
+
+    const settingsRows = settings.map(setting => `
+        <div class="data-row">
+            <div class="data-main">
+                <div class="data-title">
+                    <span class="data-name">${setting.label || setting.id}</span>
+                    <span class="data-type">${setting.type}</span>
+                </div>
+                <div class="data-details">
+                    <span><strong>ID:</strong> ${setting.id}</span>
+                    <span><strong>Value:</strong> ${JSON.stringify(setting.value)}</span>
+                    <span><strong>Description:</strong> ${setting.description || 'N/A'}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    return `
+        <div class="formatted-data">
+            <h4>Settings (${settings.length})</h4>
+            <div class="data-rows">
+                ${settingsRows}
+            </div>
+        </div>
+    `;
+}
+
+// View detail functions (placeholder)
+function viewOrderDetails(orderId) {
+    showToast('info', `Order details for #${orderId} (feature coming soon)`);
+}
+
+function viewProductDetails(productId) {
+    showToast('info', `Product details for #${productId} (feature coming soon)`);
+}
+
+function viewCustomerDetails(customerId) {
+    showToast('info', `Customer details for #${customerId} (feature coming soon)`);
+}
+
+// View raw data function
+function viewRawData(data) {
+    if (typeof data === 'string') {
+        try {
+            data = JSON.parse(data.replace(/&quot;/g, '"'));
+        } catch (e) {
+            showToast('error', 'Failed to parse data');
+            return;
+        }
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="mdi mdi-code-json"></i> Raw Data</h3>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-outline btn-sm" onclick="copyRawData(this)">
+                        <i class="mdi mdi-content-copy"></i> Copy JSON
+                    </button>
+                </div>
+                <pre style="max-height: 60vh; overflow-y: auto;"><code class="json-code">${JSON.stringify(data, null, 2)}</code></pre>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Copy raw data function
+function copyRawData(button) {
+    const jsonCode = button.closest('.modal').querySelector('.json-code');
+    if (jsonCode) {
+        navigator.clipboard.writeText(jsonCode.textContent).then(() => {
+            showToast('success', 'JSON copied to clipboard!');
+        }).catch(() => {
+            showToast('error', 'Failed to copy to clipboard');
+        });
+    }
+}
+
+// Toggle data view function
+function toggleDataView(viewType, button) {
+    const container = button.closest('.formatted-data');
+    const formattedView = container.querySelector('.formatted-view');
+    const rawView = container.querySelector('.raw-view');
+    const buttons = container.querySelectorAll('.view-toggles .btn');
+    
+    // Remove active class from all buttons
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    // Add active class to clicked button
+    button.classList.add('active');
+    
+    if (viewType === 'formatted') {
+        formattedView.classList.remove('hidden');
+        rawView.classList.add('hidden');
+    } else {
+        formattedView.classList.add('hidden');
+        rawView.classList.remove('hidden');
+    }
+}
+
+// Copy results to clipboard
+function copyResults() {
+    const jsonCode = document.querySelector('.json-code');
+    if (jsonCode) {
+        navigator.clipboard.writeText(jsonCode.textContent).then(() => {
+            showToast('success', 'JSON copied to clipboard!');
+        }).catch(() => {
+            showToast('error', 'Failed to copy to clipboard');
+        });
+    }
+}
+
+// Clear results
+function clearResults() {
+    document.getElementById('resultsSection').style.display = 'none';
+}
+
+// Parameter help modal
+function showParameterHelp() {
+    document.getElementById('parameterHelpModal').classList.remove('hidden');
+}
+
+function hideParameterHelp() {
+    document.getElementById('parameterHelpModal').classList.add('hidden');
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default pagination when endpoint is selected
+    showEndpointSpecificFilters();
+});
+</script>
+{% endblock %} 

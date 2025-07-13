@@ -1,0 +1,964 @@
+{% extends "base.html" %}
+
+{% block title %}Connect Store{% endblock %}
+
+{% block content %}
+<div class="integration-page">
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb">
+        <span class="breadcrumb-item">Integrations</span>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">WooCommerce</span>
+    </div>
+
+    <!-- Page Title -->
+    <div class="page-title">
+        <h1>WooCommerce</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="integration-content">
+        <!-- WooCommerce Logo -->
+        <div class="integration-logo">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background -->
+                <rect width="120" height="120" rx="12" fill="#7F54B3"/>
+                
+                <!-- WooCommerce W -->
+                <path d="M20 35 L30 70 L40 35 L50 70 L60 35 L70 70 L80 35 L90 70 L100 35" 
+                      stroke="white" 
+                      stroke-width="4" 
+                      stroke-linecap="round" 
+                      stroke-linejoin="round" 
+                      fill="none"/>
+                
+                <!-- Commerce symbol -->
+                <circle cx="60" cy="85" r="8" fill="white"/>
+                <path d="M52 85 Q60 75 68 85" stroke="white" stroke-width="2" fill="none"/>
+            </svg>
+        </div>
+
+        <!-- Content Text -->
+        <div class="integration-text">
+            <h2 class="integration-title">Connect Your Assistant to Your WooCommerce Store</h2>
+            <p class="integration-description">
+                Link your existing AI assistant to your WooCommerce store to answer product questions,<br>
+                check order status, and assist customers while they shop.
+            </p>
+        </div>
+
+        <!-- Connect Button -->
+        <button class="connect-btn" onclick="showConnectForm()">
+            <i class="mdi mdi-arrow-right"></i>
+            Connect Store
+        </button>
+    </div>
+</div>
+
+<!-- Connection Form Modal -->
+<div id="connectModal" class="modal hidden">
+    <div class="modal-content connect-form-modal">
+        <div class="modal-header">
+            <h3>Connect Your WooCommerce Store</h3>
+            <button class="modal-close" onclick="hideConnectForm()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="connectForm" class="simple-form">
+                <div class="form-group">
+                    <label for="store_url" class="form-label">
+                        <i class="mdi mdi-web"></i>
+                        Store URL
+                    </label>
+                    <input 
+                        type="text" 
+                        id="store_url" 
+                        name="store_url" 
+                        class="form-input" 
+                        placeholder="yourstore.com"
+                        required
+                        onblur="formatStoreUrl(this)"
+                        oninput="validateStoreUrl(this)"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="mdi mdi-account"></i>
+                        WordPress Username
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="admin"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="mdi mdi-key-variant"></i>
+                        Application Password
+                    </label>
+                    <div class="password-input">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input" 
+                            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                            required
+                        >
+                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                            <i class="mdi mdi-eye"></i>
+                        </button>
+                    </div>
+                    <small class="form-help">
+                        <a href="#" onclick="showAppPasswordHelp()" style="color: #5243E9; text-decoration: none;">
+                            ℹ️ How to generate Application Password
+                        </a>
+                    </small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="hideConnectForm()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="connect-btn">
+                        <i class="mdi mdi-connection"></i>
+                        Connect Store
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Progress Modal -->
+<div id="progressModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Connecting to Store</h3>
+        </div>
+        <div class="modal-body">
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="step" id="step1">
+                    <div class="step-icon">
+                        <i class="mdi mdi-account-check"></i>
+                    </div>
+                    <div class="step-content">
+                        <h4>Authenticating</h4>
+                        <p>Verifying your WordPress credentials...</p>
+                    </div>
+                </div>
+                
+                <div class="step" id="step2">
+                    <div class="step-icon">
+                        <i class="mdi mdi-store"></i>
+                    </div>
+                    <div class="step-content">
+                        <h4>Connecting Store</h4>
+                        <p>Accessing your WooCommerce store...</p>
+                    </div>
+                </div>
+                
+                <div class="step" id="step3">
+                    <div class="step-icon">
+                        <i class="mdi mdi-api"></i>
+                    </div>
+                    <div class="step-content">
+                        <h4>Testing Access</h4>
+                        <p>Verifying WooCommerce API access...</p>
+                    </div>
+                </div>
+                
+                <div class="step" id="step4">
+                    <div class="step-icon">
+                        <i class="mdi mdi-check-circle"></i>
+                    </div>
+                    <div class="step-content">
+                        <h4>Complete</h4>
+                        <p>Store connected successfully!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.integration-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    background: #ffffff;
+    min-height: 100vh;
+}
+
+.breadcrumb {
+    padding: 1rem 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 2rem;
+}
+
+.breadcrumb-item {
+    color: #6b7280;
+}
+
+.breadcrumb-item.active {
+    color: #374151;
+}
+
+.breadcrumb-separator {
+    margin: 0 0.5rem;
+    color: #9ca3af;
+}
+
+.page-title {
+    margin-bottom: 4rem;
+}
+
+.page-title h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.integration-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 0;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.integration-logo {
+    margin-bottom: 2rem;
+}
+
+.integration-text {
+    margin-bottom: 2rem;
+}
+
+.integration-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.integration-description {
+    font-size: 1rem;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0;
+    font-weight: 400;
+}
+
+.connect-btn {
+    background: #6366f1;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.connect-btn:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+}
+
+.connect-btn:active {
+    transform: translateY(0);
+}
+
+.connect-form-modal {
+    max-width: 500px;
+    width: 90%;
+}
+
+.simple-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.simple-form .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.simple-form .form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.simple-form .form-input {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.simple-form .form-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.simple-form .form-input.url-valid {
+    border-color: #059669;
+    background-image: url("data:image/svg+xml,%3csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z' fill='%23059669'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+.simple-form .form-input.url-invalid {
+    border-color: #dc2626;
+    background-image: url("data:image/svg+xml,%3csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M4 4l8 8m0-8l-8 8' stroke='%23dc2626' stroke-width='2' stroke-linecap='round'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+.url-notification {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #166534;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.password-input {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.form-help {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.btn.btn-outline {
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn.btn-outline:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+/* Progress Steps */
+.progress-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.step.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    opacity: 1;
+    animation: pulse 2s infinite;
+}
+
+.step.completed {
+    background: #f0fdf4;
+    border-color: #10b981;
+    opacity: 1;
+    animation: none;
+}
+
+.step.error {
+    background: #fef2f2;
+    border-color: #ef4444;
+    opacity: 1;
+    animation: none;
+}
+
+.step-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #64748b;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.step.active .step-icon {
+    background: #3b82f6;
+    color: white;
+}
+
+.step.active .step-icon::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #3b82f6;
+    opacity: 0.3;
+    animation: ripple 2s infinite;
+}
+
+.step.completed .step-icon {
+    background: #10b981;
+    color: white;
+}
+
+.step.completed .step-icon i::before {
+    content: "\F012C"; /* mdi-check */
+}
+
+.step.error .step-icon {
+    background: #ef4444;
+    color: white;
+}
+
+.step.error .step-icon i::before {
+    content: "\F0026"; /* mdi-alert-circle */
+}
+
+.step-content h4 {
+    margin: 0 0 0.25rem 0;
+    color: #1e293b;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.step-content p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.875rem;
+    transition: color 0.3s ease;
+}
+
+.step.active .step-content p {
+    color: #3b82f6;
+}
+
+.step.completed .step-content p {
+    color: #10b981;
+}
+
+.step.error .step-content p {
+    color: #ef4444;
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .integration-page {
+        padding: 0 1rem;
+    }
+    
+    .integration-title {
+        font-size: 1.5rem;
+    }
+    
+    .integration-description {
+        font-size: 0.875rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Show connection form modal
+function showConnectForm() {
+    document.getElementById('connectModal').classList.remove('hidden');
+}
+
+// Hide connection form modal
+function hideConnectForm() {
+    document.getElementById('connectModal').classList.add('hidden');
+}
+
+// Show Application Password help
+function showAppPasswordHelp() {
+    const helpHtml = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>How to Generate Application Password</h3>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: left;">
+                    <h4 style="color: #5243E9; margin-bottom: 1rem;">📋 Step-by-Step Guide:</h4>
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 0.5rem;">
+                        <h5 style="margin: 0 0 0.5rem 0; color: #059669;">1. Access WordPress Admin</h5>
+                        <p style="margin: 0; font-size: 0.9rem; color: #6b7280;">
+                            Log into your WordPress admin panel → Go to <strong>Users → Profile</strong>
+                        </p>
+                    </div>
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 0.5rem;">
+                        <h5 style="margin: 0 0 0.5rem 0; color: #059669;">2. Find Application Passwords</h5>
+                        <p style="margin: 0; font-size: 0.9rem; color: #6b7280;">
+                            Scroll down to <strong>"Application Passwords"</strong> section
+                        </p>
+                    </div>
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 0.5rem;">
+                        <h5 style="margin: 0 0 0.5rem 0; color: #059669;">3. Generate Password</h5>
+                        <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #6b7280;">
+                            Enter name: <strong>"WooCommerce Integration"</strong>
+                        </p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #6b7280;">
+                            Click <strong>"Add New Application Password"</strong>
+                        </p>
+                    </div>
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: #e0f2fe; border-radius: 0.5rem;">
+                        <h5 style="margin: 0 0 0.5rem 0; color: #0369a1;">4. Copy Password</h5>
+                        <p style="margin: 0; font-size: 0.9rem; color: #6b7280;">
+                            ⚠️ <strong>Important:</strong> Copy the password immediately!<br>
+                            Format: <code>xxxx xxxx xxxx xxxx xxxx xxxx</code>
+                        </p>
+                    </div>
+                    <div style="text-align: center; margin-top: 1.5rem;">
+                        <button onclick="closeModal()" class="connect-btn">
+                            Got it!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    showModal(helpHtml);
+}
+
+// Show detailed error with troubleshooting steps
+function showDetailedError(result) {
+    const errorCode = result.error_code || 'UNKNOWN_ERROR';
+    const message = result.message || 'Connection failed';
+    const troubleshootingSteps = result.troubleshooting_steps || [];
+    
+    // Create error icon based on error type
+    let errorIcon = '❌';
+    let errorColor = '#dc2626';
+    
+    if (errorCode === 'ACCESS_DENIED') {
+        errorIcon = '🔐';
+        errorColor = '#d97706';
+    } else if (errorCode === 'AUTHENTICATION_FAILED') {
+        errorIcon = '🔑';
+        errorColor = '#dc2626';
+    } else if (errorCode === 'API_NOT_FOUND') {
+        errorIcon = '🔍';
+        errorColor = '#7c3aed';
+    } else if (errorCode === 'CONNECTION_ERROR') {
+        errorIcon = '🌐';
+        errorColor = '#059669';
+    } else if (errorCode === 'SSL_ERROR') {
+        errorIcon = '🔒';
+        errorColor = '#dc2626';
+    }
+    
+    const troubleshootingHtml = troubleshootingSteps.length > 0 ? `
+        <div style="margin-top: 1.5rem;">
+            <h4 style="color: #374151; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;">
+                💡 How to Fix This:
+            </h4>
+            <ul style="margin: 0; padding-left: 0; list-style: none;">
+                ${troubleshootingSteps.map(step => `
+                    <li style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f9fafb; border-radius: 0.375rem; font-size: 0.875rem; color: #374151;">
+                        ${step}
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+    ` : '';
+    
+    const errorHtml = `
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.5rem;">${errorIcon}</span>
+                    Connection Failed
+                </h3>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: left;">
+                    <div style="padding: 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; margin-bottom: 1rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: ${errorColor}; font-size: 1rem; font-weight: 600;">
+                            ${message}
+                        </h4>
+                        <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">
+                            Error Code: <code style="background: #f3f4f6; padding: 0.125rem 0.25rem; border-radius: 0.25rem;">${errorCode}</code>
+                        </p>
+                    </div>
+                    
+                    ${troubleshootingHtml}
+                    
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem;">
+                        <h5 style="margin: 0 0 0.5rem 0; color: #0369a1; font-size: 0.875rem; font-weight: 600;">
+                            💬 Still Need Help?
+                        </h5>
+                        <p style="margin: 0; font-size: 0.8rem; color: #6b7280;">
+                            Check the browser console for technical details, or contact your WordPress administrator.
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+                        <button onclick="closeModal()" class="btn btn-outline">
+                            Close
+                        </button>
+                        <button onclick="retryConnection()" class="connect-btn">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    showModal(errorHtml);
+    
+    // Log detailed error for debugging
+    console.error('Connection Error Details:', result);
+}
+
+// Retry connection function
+function retryConnection() {
+    closeModal();
+    showConnectForm();
+}
+
+// Show modal helper
+function showModal(html) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = html;
+    document.body.appendChild(modal);
+    
+    // Add close function
+    window.closeModal = function() {
+        modal.remove();
+    };
+    
+    // Close on background click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+// Toggle password visibility
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.querySelector('.password-toggle i');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleBtn.className = 'mdi mdi-eye-off';
+    } else {
+        passwordInput.type = 'password';
+        toggleBtn.className = 'mdi mdi-eye';
+    }
+}
+
+// Handle form submission
+document.getElementById('connectForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    // Hide form modal
+    hideConnectForm();
+    
+    // Show progress modal
+    const progressModal = document.getElementById('progressModal');
+    progressModal.classList.remove('hidden');
+    
+    // Reset all steps
+    const steps = ['step1', 'step2', 'step3', 'step4'];
+    steps.forEach(step => {
+        const element = document.getElementById(step);
+        element.classList.remove('active', 'completed', 'error');
+    });
+    
+    // Step 1: Authentication
+    updateProgressStep('step1', 'active', 'Verifying your WordPress credentials...');
+    
+    try {
+        // Test connection first
+        const testResponse = await fetch('/api/test-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const testResult = await testResponse.json();
+        
+        if (testResult.success) {
+            // Step 1 complete
+            updateProgressStep('step1', 'completed', 'Authentication successful!');
+            
+            // Step 2: Store Connection
+            updateProgressStep('step2', 'active', 'Connecting to your WooCommerce store...');
+            
+            await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause for UX
+            
+            // Step 3: API Testing
+            updateProgressStep('step2', 'completed', 'Store connection established!');
+            updateProgressStep('step3', 'active', 'Testing WooCommerce API access...');
+            
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Final connection
+            const response = await fetch('/api/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Step 3 & 4 complete
+                updateProgressStep('step3', 'completed', 'API access verified!');
+                updateProgressStep('step4', 'active', 'Saving store configuration...');
+                
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                updateProgressStep('step4', 'completed', 'Store connected successfully!');
+                
+                setTimeout(() => {
+                    progressModal.classList.add('hidden');
+                    showToast('success', `Store "${result.store_name}" connected successfully!`);
+                    // Redirect to stores page
+                    window.location.href = '/stores';
+                }, 1500);
+            } else {
+                // Connection failed at final step
+                updateProgressStep('step3', 'error', 'Connection failed: ' + result.message);
+                setTimeout(() => {
+                    progressModal.classList.add('hidden');
+                    showDetailedError(result);
+                }, 2000);
+            }
+        } else {
+            // Authentication failed
+            updateProgressStep('step1', 'error', 'Authentication failed: ' + testResult.message);
+            setTimeout(() => {
+                progressModal.classList.add('hidden');
+                showDetailedError(testResult);
+            }, 2000);
+        }
+        
+    } catch (error) {
+        // Network error
+        updateProgressStep('step1', 'error', 'Network error: Unable to connect');
+        setTimeout(() => {
+            progressModal.classList.add('hidden');
+            showDetailedError({
+                error_code: 'CONNECTION_ERROR',
+                message: 'Network error: Unable to connect to the server',
+                troubleshooting_steps: [
+                    '✓ Check your internet connection',
+                    '✓ Verify the store URL is correct',
+                    '✓ Try refreshing the page and connecting again',
+                    '✓ Contact support if the issue persists'
+                ]
+            });
+        }, 2000);
+    }
+});
+
+// Update progress step helper
+function updateProgressStep(stepId, status, message) {
+    const step = document.getElementById(stepId);
+    const messageElement = step.querySelector('p');
+    
+    // Remove all status classes
+    step.classList.remove('active', 'completed', 'error');
+    
+    // Add new status
+    step.classList.add(status);
+    
+    // Update message
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+}
+
+// Auto-format store URL
+function formatStoreUrl(input) {
+    let url = input.value.trim();
+    
+    if (url && !url.match(/^https?:\/\//)) {
+        // Add https:// if no protocol specified
+        url = 'https://' + url;
+        input.value = url;
+        
+        // Show user what was auto-formatted
+        showUrlFormatted(url);
+    }
+    
+    // Validate the final URL
+    validateStoreUrl(input);
+}
+
+// Real-time URL validation
+function validateStoreUrl(input) {
+    const url = input.value.trim();
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+    
+    // Remove any previous validation styling
+    input.classList.remove('url-valid', 'url-invalid');
+    
+    if (url.length > 0) {
+        if (urlPattern.test(url)) {
+            input.classList.add('url-valid');
+        } else {
+            input.classList.add('url-invalid');
+        }
+    }
+}
+
+// Show URL formatting notification
+function showUrlFormatted(url) {
+    // Create or update notification
+    let notification = document.getElementById('url-notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'url-notification';
+        notification.className = 'url-notification';
+        document.querySelector('#store_url').parentNode.appendChild(notification);
+    }
+    
+    notification.innerHTML = `
+        <i class="mdi mdi-check-circle" style="color: #059669;"></i>
+        Auto-formatted to: <strong>${url}</strong>
+    `;
+    notification.style.display = 'block';
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        if (notification) {
+            notification.style.display = 'none';
+        }
+    }, 3000);
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideConnectForm();
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="mdi mdi-view-dashboard"></i>
+            Dashboard
+        </h1>
+        <p class="page-subtitle">Overview of your WooCommerce integrations</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="mdi mdi-store"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ stats.total_stores }}</h3>
+                <p class="stat-label">Total Stores</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ stats.active_stores }}</h3>
+                <p class="stat-label">Active Stores</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon accent">
+                <i class="mdi mdi-connection"></i>
+            </div>
+            <div class="stat-content">
+                <h3 class="stat-number">{{ stats.recent_connections }}</h3>
+                <p class="stat-label">Recent Connections</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+        <!-- Connected Stores -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="mdi mdi-store"></i>
+                    Connected Stores
+                </h2>
+                <a href="{{ url_for('stores_page') }}" class="btn btn-outline">
+                    View All
+                    <i class="mdi mdi-arrow-right"></i>
+                </a>
+            </div>
+            
+            {% if stores %}
+                <div class="stores-list">
+                    {% for store in stores[:3] %}
+                    <div class="store-item">
+                        <div class="store-info">
+                            <div class="store-icon">
+                                <i class="mdi mdi-store"></i>
+                            </div>
+                            <div class="store-details">
+                                <h4 class="store-name">{{ store.store_name or 'Unknown Store' }}</h4>
+                                <p class="store-url">{{ store.store_url }}</p>
+                                <small class="store-meta">
+                                    Connected {{ store.created_at }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="store-status">
+                            <span class="status-badge {% if store.status == 'active' %}success{% else %}inactive{% endif %}">
+                                {% if store.status == 'active' %}
+                                    <i class="mdi mdi-check-circle"></i>
+                                    Active
+                                {% else %}
+                                    <i class="mdi mdi-pause-circle"></i>
+                                    Inactive
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="mdi mdi-store-plus"></i>
+                    <h3>No stores connected yet</h3>
+                    <p>Get started by connecting your first WooCommerce store</p>
+                    <a href="{{ url_for('connect_page') }}" class="btn btn-primary">
+                        <i class="mdi mdi-plus"></i>
+                        Connect Store
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="mdi mdi-history"></i>
+                    Recent Activity
+                </h2>
+                <a href="{{ url_for('logs_page') }}" class="btn btn-outline">
+                    View All
+                    <i class="mdi mdi-arrow-right"></i>
+                </a>
+            </div>
+            
+            {% if logs %}
+                <div class="activity-list">
+                    {% for log in logs %}
+                    <div class="activity-item">
+                        <div class="activity-icon {% if log.status == 'success' %}success{% else %}error{% endif %}">
+                            {% if log.status == 'success' %}
+                                <i class="mdi mdi-check"></i>
+                            {% else %}
+                                <i class="mdi mdi-alert"></i>
+                            {% endif %}
+                        </div>
+                        <div class="activity-content">
+                            <p class="activity-message">{{ log.message }}</p>
+                            <small class="activity-time">{{ log.timestamp }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state small">
+                    <i class="mdi mdi-history"></i>
+                    <p>No recent activity</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="actions-grid">
+            <a href="{{ url_for('connect_page') }}" class="action-card primary">
+                <div class="action-icon">
+                    <i class="mdi mdi-plus-circle"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Connect New Store</h3>
+                    <p>Add a new WooCommerce store to your integration</p>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('stores_page') }}" class="action-card accent">
+                <div class="action-icon">
+                    <i class="mdi mdi-cog"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Manage Stores</h3>
+                    <p>View and manage your connected stores</p>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('logs_page') }}" class="action-card subtle">
+                <div class="action-icon">
+                    <i class="mdi mdi-chart-line"></i>
+                </div>
+                <div class="action-content">
+                    <h3>View Analytics</h3>
+                    <p>Check connection logs and activity history</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

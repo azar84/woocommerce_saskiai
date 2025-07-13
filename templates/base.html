@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WooCommerce Integration{% endblock %} - Saski AI</title>
+    
+    <!-- Saski AI Brand Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Material Design Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.2.96/css/materialdesignicons.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-icon">🚀</div>
+                <span class="brand-text">Saski AI</span>
+                <span class="brand-subtitle">WooCommerce Integration</span>
+            </div>
+            
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="mdi mdi-view-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('connect_page') }}" class="nav-link {% if request.endpoint == 'connect_page' %}active{% endif %}">
+                    <i class="mdi mdi-plus-circle"></i>
+                    <span>Connect Store</span>
+                </a>
+                <a href="{{ url_for('stores_page') }}" class="nav-link {% if request.endpoint == 'stores_page' %}active{% endif %}">
+                    <i class="mdi mdi-store"></i>
+                    <span>Stores</span>
+                </a>
+                <a href="{{ url_for('api_tester_page') }}" class="nav-link {% if request.endpoint == 'api_tester_page' %}active{% endif %}">
+                    <i class="mdi mdi-api"></i>
+                    <span>API Tester</span>
+                </a>
+                <a href="{{ url_for('logs_page') }}" class="nav-link {% if request.endpoint == 'logs_page' %}active{% endif %}">
+                    <i class="mdi mdi-history"></i>
+                    <span>Logs</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden">
+        <div class="toast-content">
+            <i id="toastIcon" class="mdi"></i>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

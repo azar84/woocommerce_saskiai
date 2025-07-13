@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Logs{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="mdi mdi-history"></i>
+                Connection Logs
+            </h1>
+            <p class="page-subtitle">Monitor connection activity and troubleshoot issues</p>
+        </div>
+        <div class="header-actions">
+            <select id="logFilter" class="form-select" onchange="filterLogs()">
+                <option value="all">All Activities</option>
+                <option value="success">Successful Only</option>
+                <option value="error">Errors Only</option>
+                <option value="store_credentials">Store Connections</option>
+                <option value="disconnect_store">Disconnections</option>
+            </select>
+            <button class="btn btn-outline" onclick="refreshLogs()">
+                <i class="mdi mdi-refresh"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    {% if logs %}
+        <!-- Logs List -->
+        <div class="logs-container">
+            {% for log in logs %}
+            <div class="log-entry {% if log.status == 'success' %}success{% else %}error{% endif %}" 
+                 data-action="{{ log.action }}" data-status="{{ log.status }}">
+                <div class="log-icon">
+                    {% if log.status == 'success' %}
+                        <i class="mdi mdi-check-circle"></i>
+                    {% else %}
+                        <i class="mdi mdi-alert-circle"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="log-content">
+                    <div class="log-header">
+                        <h4 class="log-action">
+                            {% if log.action == 'store_credentials' %}
+                                <i class="mdi mdi-store-plus"></i>
+                                Store Connected
+                            {% elif log.action == 'disconnect_store' %}
+                                <i class="mdi mdi-store-remove"></i>
+                                Store Disconnected
+                            {% elif log.action == 'generate_keys' %}
+                                <i class="mdi mdi-key-variant"></i>
+                                API Keys Generated
+                            {% elif log.action == 'test_connection' %}
+                                <i class="mdi mdi-connection"></i>
+                                Connection Tested
+                            {% else %}
+                                <i class="mdi mdi-information"></i>
+                                {{ log.action|title }}
+                            {% endif %}
+                        </h4>
+                        <span class="log-timestamp">{{ log.timestamp }}</span>
+                    </div>
+                    
+                    <p class="log-message">{{ log.message }}</p>
+                    
+                    {% if log.store_url %}
+                    <div class="log-details">
+                        <span class="log-store">
+                            <i class="mdi mdi-store"></i>
+                            {{ log.store_url }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="log-status">
+                    <span class="status-indicator {% if log.status == 'success' %}success{% else %}error{% endif %}">
+                        {{ log.status|title }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Load More -->
+        <div class="load-more">
+            <button id="loadMoreBtn" class="btn btn-outline" onclick="loadMoreLogs()">
+                <i class="mdi mdi-chevron-down"></i>
+                Load More Logs
+            </button>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state large">
+            <div class="empty-icon">
+                <i class="mdi mdi-history"></i>
+            </div>
+            <h2>No activity logs yet</h2>
+            <p>Connection logs and activity will appear here once you start connecting stores.</p>
+            <div class="empty-actions">
+                <a href="{{ url_for('connect_page') }}" class="btn btn-primary">
+                    <i class="mdi mdi-plus"></i>
+                    Connect Your First Store
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Log Details Modal -->
+<div id="logModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Log Details</h3>
+            <button class="modal-close" onclick="hideLogModal()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="logDetails">
+                <!-- Log details will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentLogOffset = {% if logs %}{{ logs|length }}{% else %}0{% endif %};
+let isLoading = false;
+
+// Filter logs by type
+function filterLogs() {
+    const filter = document.getElementById('logFilter').value;
+    const logEntries = document.querySelectorAll('.log-entry');
+    
+    logEntries.forEach(entry => {
+        const action = entry.getAttribute('data-action');
+        const status = entry.getAttribute('data-status');
+        
+        let shouldShow = true;
+        
+        if (filter === 'success' && status !== 'success') {
+            shouldShow = false;
+        } else if (filter === 'error' && status !== 'error') {
+            shouldShow = false;
+        } else if (filter !== 'all' && filter !== 'success' && filter !== 'error' && action !== filter) {
+            shouldShow = false;
+        }
+        
+        entry.style.display = shouldShow ? 'flex' : 'none';
+    });
+    
+    // Update empty state visibility
+    const visibleLogs = document.querySelectorAll('.log-entry[style="display: flex"], .log-entry:not([style])');
+    const emptyState = document.querySelector('.empty-state');
+    
+    if (visibleLogs.length === 0 && !emptyState) {
+        showEmptyFilterState();
+    } else if (visibleLogs.length > 0) {
+        hideEmptyFilterState();
+    }
+}
+
+// Refresh logs
+async function refreshLogs() {
+    showLoading();
+    
+    try {
+        const response = await fetch('/api/logs?limit=50');
+        const data = await response.json();
+        
+        if (data.logs) {
+            // Reload page to show updated logs
+            location.reload();
+        }
+    } catch (error) {
+        showToast('error', 'Failed to refresh logs');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Load more logs
+async function loadMoreLogs() {
+    if (isLoading) return;
+    
+    isLoading = true;
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    loadMoreBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Loading...';
+    loadMoreBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/logs?limit=25&offset=${currentLogOffset}`);
+        const data = await response.json();
+        
+        if (data.logs && data.logs.length > 0) {
+            // Add new logs to the container
+            const logsContainer = document.querySelector('.logs-container');
+            
+            data.logs.forEach(log => {
+                const logElement = createLogElement(log);
+                logsContainer.appendChild(logElement);
+            });
+            
+            currentLogOffset += data.logs.length;
+            
+            // Hide load more button if no more logs
+            if (data.logs.length < 25) {
+                loadMoreBtn.style.display = 'none';
+            }
+        } else {
+            loadMoreBtn.style.display = 'none';
+            showToast('info', 'No more logs to load');
+        }
+        
+    } catch (error) {
+        showToast('error', 'Failed to load more logs');
+    } finally {
+        isLoading = false;
+        loadMoreBtn.innerHTML = '<i class="mdi mdi-chevron-down"></i> Load More Logs';
+        loadMoreBtn.disabled = false;
+    }
+}
+
+// Create log element
+function createLogElement(log) {
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry ${log.status}`;
+    logEntry.setAttribute('data-action', log.action);
+    logEntry.setAttribute('data-status', log.status);
+    
+    let actionIcon = 'mdi-information';
+    let actionText = log.action;
+    
+    switch (log.action) {
+        case 'store_credentials':
+            actionIcon = 'mdi-store-plus';
+            actionText = 'Store Connected';
+            break;
+        case 'disconnect_store':
+            actionIcon = 'mdi-store-remove';
+            actionText = 'Store Disconnected';
+            break;
+        case 'generate_keys':
+            actionIcon = 'mdi-key-variant';
+            actionText = 'API Keys Generated';
+            break;
+        case 'test_connection':
+            actionIcon = 'mdi-connection';
+            actionText = 'Connection Tested';
+            break;
+    }
+    
+    logEntry.innerHTML = `
+        <div class="log-icon">
+            <i class="mdi ${log.status === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'}"></i>
+        </div>
+        
+        <div class="log-content">
+            <div class="log-header">
+                <h4 class="log-action">
+                    <i class="mdi ${actionIcon}"></i>
+                    ${actionText}
+                </h4>
+                <span class="log-timestamp">${log.timestamp}</span>
+            </div>
+            
+            <p class="log-message">${log.message}</p>
+            
+            ${log.store_url ? `
+                <div class="log-details">
+                    <span class="log-store">
+                        <i class="mdi mdi-store"></i>
+                        ${log.store_url}
+                    </span>
+                </div>
+            ` : ''}
+        </div>
+        
+        <div class="log-status">
+            <span class="status-indicator ${log.status}">
+                ${log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+            </span>
+        </div>
+    `;
+    
+    return logEntry;
+}
+
+// Show empty filter state
+function showEmptyFilterState() {
+    const existingEmptyState = document.querySelector('.empty-filter-state');
+    if (existingEmptyState) return;
+    
+    const logsContainer = document.querySelector('.logs-container');
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state empty-filter-state';
+    emptyState.innerHTML = `
+        <div class="empty-icon">
+            <i class="mdi mdi-filter-off"></i>
+        </div>
+        <h3>No logs match the current filter</h3>
+        <p>Try adjusting the filter or clearing it to see all logs.</p>
+        <button class="btn btn-outline" onclick="clearFilter()">
+            <i class="mdi mdi-filter-remove"></i>
+            Clear Filter
+        </button>
+    `;
+    
+    logsContainer.appendChild(emptyState);
+}
+
+// Hide empty filter state
+function hideEmptyFilterState() {
+    const emptyState = document.querySelector('.empty-filter-state');
+    if (emptyState) {
+        emptyState.remove();
+    }
+}
+
+// Clear filter
+function clearFilter() {
+    document.getElementById('logFilter').value = 'all';
+    filterLogs();
+}
+
+// Auto-refresh logs every 60 seconds
+setInterval(async function() {
+    try {
+        const response = await fetch(`/api/logs?limit=5`);
+        const data = await response.json();
+        
+        if (data.logs && data.logs.length > 0) {
+            // Check if there are new logs by comparing timestamps
+            const firstLogElement = document.querySelector('.log-entry');
+            if (firstLogElement) {
+                const firstLogTime = firstLogElement.querySelector('.log-timestamp').textContent;
+                const latestLogTime = data.logs[0].timestamp;
+                
+                if (latestLogTime !== firstLogTime) {
+                    // Show notification about new logs
+                    showToast('info', 'New activity detected. Refresh to see latest logs.');
+                }
+            }
+        }
+    } catch (error) {
+        console.log('Auto-refresh failed:', error);
+    }
+}, 60000);
+</script>
+{% endblock %} 

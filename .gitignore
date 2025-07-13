@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# WooCommerce Integration App
+# Database and encryption files
+woocommerce_credentials.db
+encryption.key

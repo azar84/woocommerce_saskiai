@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}Stores{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="mdi mdi-store"></i>
+                Connected Stores
+            </h1>
+            <p class="page-subtitle">Manage your WooCommerce store connections</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('connect_page') }}" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Connect New Store
+            </a>
+        </div>
+    </div>
+
+    {% if stores %}
+        <!-- Stores Grid -->
+        <div class="stores-grid">
+            {% for store in stores %}
+            <div class="store-card" data-store-id="{{ store.id }}">
+                <div class="store-header">
+                    <div class="store-info">
+                        <div class="store-icon">
+                            <i class="mdi mdi-store"></i>
+                        </div>
+                        <div class="store-details">
+                            <h3 class="store-name">{{ store.store_name or 'Unknown Store' }}</h3>
+                            <p class="store-url">{{ store.store_url }}</p>
+                        </div>
+                    </div>
+                    <div class="store-status">
+                        <span class="status-badge {% if store.status == 'active' %}success{% else %}inactive{% endif %}">
+                            {% if store.status == 'active' %}
+                                <i class="mdi mdi-check-circle"></i>
+                                Active
+                            {% else %}
+                                <i class="mdi mdi-pause-circle"></i>
+                                Inactive
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="store-meta">
+                    <div class="meta-item">
+                        <i class="mdi mdi-shield-check"></i>
+                        <span>Authentication: Application Password</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="mdi mdi-account-key"></i>
+                        <span>Permissions: {{ store.permissions }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="mdi mdi-calendar"></i>
+                        <span>Connected: {{ store.created_at }}</span>
+                    </div>
+                </div>
+
+                <div class="store-actions">
+                    <button class="btn btn-outline btn-sm" onclick="testConnection({{ store.id }})">
+                        <i class="mdi mdi-connection"></i>
+                        Test Connection
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="viewCredentials({{ store.id }})">
+                        <i class="mdi mdi-key"></i>
+                        View Credentials
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="disconnectStore('{{ store.store_url }}', '{{ store.store_name }}')">
+                        <i class="mdi mdi-disconnect"></i>
+                        Disconnect
+                    </button>
+                </div>
+
+                <!-- Connection Status -->
+                <div id="status-{{ store.id }}" class="connection-status hidden">
+                    <div class="status-content">
+                        <div class="status-icon">
+                            <i class="mdi mdi-loading mdi-spin"></i>
+                        </div>
+                        <p class="status-message">Testing connection...</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions">
+            <div class="bulk-info">
+                <span id="selectedCount">0</span> stores selected
+            </div>
+            <div class="bulk-buttons">
+                <button class="btn btn-outline btn-sm" onclick="testAllConnections()">
+                    <i class="mdi mdi-connection"></i>
+                    Test All
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="disconnectSelected()">
+                    <i class="mdi mdi-disconnect"></i>
+                    Disconnect Selected
+                </button>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state large">
+            <div class="empty-icon">
+                <i class="mdi mdi-store-plus"></i>
+            </div>
+            <h2>No stores connected yet</h2>
+            <p>Connect your first WooCommerce store to get started with automated API key management.</p>
+            <div class="empty-actions">
+                <a href="{{ url_for('connect_page') }}" class="btn btn-primary">
+                    <i class="mdi mdi-plus"></i>
+                    Connect Your First Store
+                </a>
+                <a href="https://docs.saski.ai/woocommerce" class="btn btn-outline" target="_blank">
+                    <i class="mdi mdi-book-open"></i>
+                    View Documentation
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Disconnect Confirmation Modal -->
+<div id="disconnectModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Disconnect Store</h3>
+            <button class="modal-close" onclick="hideDisconnectModal()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-icon">
+                <i class="mdi mdi-alert-circle"></i>
+            </div>
+            <h4>Are you sure you want to disconnect this store?</h4>
+            <p id="disconnectMessage">This will remove the store connection and credentials. You can reconnect later if needed.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="hideDisconnectModal()">Cancel</button>
+            <button id="confirmDisconnect" class="btn btn-danger">
+                <i class="mdi mdi-disconnect"></i>
+                Disconnect Store
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Credentials Modal -->
+<div id="credentialsModal" class="modal hidden">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3>
+                <i class="mdi mdi-key-variant"></i>
+                Store Credentials
+            </h3>
+            <button class="modal-close" onclick="hideCredentialsModal()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="credentialsContent">
+                <div class="loading-state">
+                    <i class="mdi mdi-loading mdi-spin"></i>
+                    <p>Loading credentials...</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="hideCredentialsModal()">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentStoreToDisconnect = null;
+
+// Test connection for a specific store
+async function testConnection(storeId) {
+    const statusElement = document.getElementById(`status-${storeId}`);
+    const storeCard = document.querySelector(`[data-store-id="${storeId}"]`);
+    
+    // Show testing status
+    statusElement.classList.remove('hidden');
+    statusElement.innerHTML = `
+        <div class="status-content">
+            <div class="status-icon">
+                <i class="mdi mdi-loading mdi-spin"></i>
+            </div>
+            <p class="status-message">Testing connection...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/api/stores/${storeId}/test`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            statusElement.innerHTML = `
+                <div class="status-content success">
+                    <div class="status-icon">
+                        <i class="mdi mdi-check-circle"></i>
+                    </div>
+                    <p class="status-message">Connection successful!</p>
+                    <div class="status-details">
+                        <small>Orders: ${result.orders_count || 0} accessible</small>
+                        <small>Products: ${result.products_count || 0} accessible</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            statusElement.innerHTML = `
+                <div class="status-content error">
+                    <div class="status-icon">
+                        <i class="mdi mdi-alert-circle"></i>
+                    </div>
+                    <p class="status-message">Connection failed</p>
+                    <div class="status-details">
+                        <small>${result.message}</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Hide status after 5 seconds
+        setTimeout(() => {
+            statusElement.classList.add('hidden');
+        }, 5000);
+        
+    } catch (error) {
+        statusElement.innerHTML = `
+            <div class="status-content error">
+                <div class="status-icon">
+                    <i class="mdi mdi-alert-circle"></i>
+                </div>
+                <p class="status-message">Test failed</p>
+                <div class="status-details">
+                    <small>Network error occurred</small>
+                </div>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            statusElement.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Show disconnect confirmation modal
+function disconnectStore(storeUrl, storeName) {
+    currentStoreToDisconnect = storeUrl;
+    document.getElementById('disconnectMessage').textContent = 
+        `This will disconnect "${storeName}" and remove its authentication credentials. You can reconnect later if needed.`;
+    document.getElementById('disconnectModal').classList.remove('hidden');
+}
+
+// Hide disconnect modal
+function hideDisconnectModal() {
+    document.getElementById('disconnectModal').classList.add('hidden');
+    currentStoreToDisconnect = null;
+}
+
+// Confirm disconnect
+document.getElementById('confirmDisconnect').addEventListener('click', async function() {
+    if (!currentStoreToDisconnect) return;
+    
+    try {
+        const response = await fetch('/api/stores/disconnect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                store_url: currentStoreToDisconnect
+            })
+        });
+        
+        const result = await response.json();
+        
+        hideDisconnectModal();
+        
+        if (result.success) {
+            showToast('success', 'Store disconnected successfully');
+            // Reload page to update the list
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToast('error', result.message);
+        }
+        
+    } catch (error) {
+        hideDisconnectModal();
+        showToast('error', 'Failed to disconnect store');
+    }
+});
+
+// Test all connections
+async function testAllConnections() {
+    const stores = document.querySelectorAll('.store-card');
+    showToast('info', 'Testing all connections...');
+    
+    for (const store of stores) {
+        const storeId = store.getAttribute('data-store-id');
+        await testConnection(storeId);
+        // Add small delay between tests
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    showToast('success', 'Connection tests completed');
+}
+
+// Auto-refresh store status every 30 seconds
+setInterval(async function() {
+    try {
+        const response = await fetch('/api/stores');
+        const data = await response.json();
+        
+        // Update store status badges if needed
+        data.stores.forEach(store => {
+            const storeCard = document.querySelector(`[data-store-id="${store.id}"]`);
+            if (storeCard) {
+                const statusBadge = storeCard.querySelector('.status-badge');
+                const newStatus = store.status === 'active' ? 'success' : 'inactive';
+                statusBadge.className = `status-badge ${newStatus}`;
+                statusBadge.innerHTML = store.status === 'active' 
+                    ? '<i class="mdi mdi-check-circle"></i> Active'
+                    : '<i class="mdi mdi-pause-circle"></i> Inactive';
+            }
+        });
+        
+    } catch (error) {
+        console.log('Auto-refresh failed:', error);
+    }
+}, 30000);
+
+// Show credentials modal
+async function viewCredentials(storeId) {
+    const modal = document.getElementById('credentialsModal');
+    const content = document.getElementById('credentialsContent');
+    
+    modal.classList.remove('hidden');
+    
+    try {
+        const response = await fetch(`/api/stores/${storeId}/credentials`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            const creds = result.credentials;
+            
+            content.innerHTML = `
+                <div class="credentials-info">
+                    <div class="auth-method-banner success">
+                        <h4>
+                            <i class="mdi mdi-check-circle"></i>
+                            Authentication Method: Application Password
+                        </h4>
+                        <p>Status: Active and Working ✅</p>
+                    </div>
+                    
+                    <div class="credentials-section">
+                        <h5>Store Information</h5>
+                        <div class="credential-item">
+                            <label>Store URL:</label>
+                            <code>${creds.store_url}</code>
+                        </div>
+                        <div class="credential-item">
+                            <label>Store Name:</label>
+                            <code>${creds.store_name}</code>
+                        </div>
+                        <div class="credential-item">
+                            <label>Permissions:</label>
+                            <code>${creds.permissions}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="credentials-section">
+                        <h5>Application Password Credentials</h5>
+                        <div class="credential-item">
+                            <label>Username:</label>
+                            <div class="credential-value">
+                                <code id="admin-username">${creds.admin_username}</code>
+                                <button class="copy-btn" onclick="copyToClipboard('admin-username')">
+                                    <i class="mdi mdi-content-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="credential-item">
+                            <label>Application Password:</label>
+                            <div class="credential-value">
+                                <code id="admin-password" class="password-hidden">••••••••••••••••</code>
+                                <button class="toggle-btn" onclick="togglePasswordVisibility('admin-password', '${creds.admin_password}')">
+                                    <i class="mdi mdi-eye"></i>
+                                </button>
+                                <button class="copy-btn" onclick="copyToClipboard('admin-password', '${creds.admin_password}')">
+                                    <i class="mdi mdi-content-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="credentials-section">
+                        <h5>Connection Details</h5>
+                        <div class="credential-item">
+                            <label>Connected:</label>
+                            <code>${new Date(creds.created_at).toLocaleString()}</code>
+                        </div>
+                        <div class="credential-item">
+                            <label>Authentication Type:</label>
+                            <code>${creds.description}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="info-banner success">
+                        <i class="mdi mdi-check-circle"></i>
+                        <p><strong>Secure Authentication:</strong> This store uses Application Password authentication 
+                        which provides secure, direct access to your WooCommerce store without needing separate API keys. 
+                        This method is recommended by WordPress for external applications.</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="error-state">
+                    <i class="mdi mdi-alert-circle"></i>
+                    <h4>Failed to load credentials</h4>
+                    <p>${result.message}</p>
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        content.innerHTML = `
+            <div class="error-state">
+                <i class="mdi mdi-alert-circle"></i>
+                <h4>Error loading credentials</h4>
+                <p>Network error occurred</p>
+            </div>
+        `;
+    }
+}
+
+// Hide credentials modal
+function hideCredentialsModal() {
+    document.getElementById('credentialsModal').classList.add('hidden');
+}
+
+// Toggle password visibility
+function togglePasswordVisibility(elementId, actualValue) {
+    const element = document.getElementById(elementId);
+    const button = element.parentNode.querySelector('.toggle-btn i');
+    
+    if (element.classList.contains('password-hidden')) {
+        element.textContent = actualValue;
+        element.classList.remove('password-hidden');
+        button.className = 'mdi mdi-eye-off';
+    } else {
+        element.textContent = '••••••••••••••••';
+        element.classList.add('password-hidden');
+        button.className = 'mdi mdi-eye';
+    }
+}
+
+// Copy to clipboard
+function copyToClipboard(elementId, actualValue = null) {
+    const element = document.getElementById(elementId);
+    const value = actualValue || element.textContent;
+    
+    navigator.clipboard.writeText(value).then(() => {
+        showToast('success', 'Copied to clipboard!');
+    }).catch(() => {
+        showToast('error', 'Failed to copy to clipboard');
+    });
+}
+</script>
+{% endblock %} 
