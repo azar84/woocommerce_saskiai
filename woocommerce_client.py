@@ -223,6 +223,16 @@ class WooCommerceClient:
             
             endpoint = endpoints[endpoint_type]
             params = search_params or {}
+
+            # --- Orders: Support filtering by email or order_number (post-filter) ---
+            filter_email = None
+            filter_order_number = None
+            if endpoint_type == 'orders':
+                if 'email' in params:
+                    filter_email = params.pop('email').strip().lower()
+                if 'order_number' in params:
+                    filter_order_number = str(params.pop('order_number')).strip().lower()
+            # -------------------------------------------------------------
             
             # Handle specific ID requests by modifying the endpoint URL
             if 'id' in params:
@@ -232,11 +242,78 @@ class WooCommerceClient:
             else:
                 # Set default pagination if not specified
                 if 'per_page' not in params:
-                    params['per_page'] = 10
+                    params['per_page'] = 50  # Use a higher default for better filtering
             
             # Make the API request
             response_data = self._make_request('GET', endpoint, params=params)
-            
+
+            # --- Filter orders by email or order_number if requested ---
+            if endpoint_type == 'orders' and (filter_email or filter_order_number):
+                # NOTE: This is a post-filter and may be slow for large datasets.
+                filtered_orders = []
+                for order in response_data if isinstance(response_data, list) else [response_data]:
+                    match = True
+                    if filter_email:
+                        match = (order.get('billing', {}).get('email', '').strip().lower() == filter_email)
+                    if match and filter_order_number:
+                        # Match by id or number field
+                        order_num = str(order.get('number', order.get('id', ''))).strip().lower()
+                        match = (order_num == filter_order_number)
+                    if match:
+                        filtered_orders.append(order)
+                response_data = filtered_orders
+            # --- End order filtering ---
+
+            # --- Remove _links from orders ---
+            if endpoint_type == 'orders':
+                if isinstance(response_data, list):
+                    for order in response_data:
+                        if '_links' in order:
+                            del order['_links']
+                elif isinstance(response_data, dict) and '_links' in response_data:
+                    del response_data['_links']
+            # --- End remove _links ---
+
+            # --- Filter product fields if endpoint is products ---
+            if endpoint_type == 'products':
+                def filter_product_fields(product):
+                    return {
+                        "id": product.get("id", 0),
+                        "name": product.get("name", ""),
+                        "permalink": product.get("permalink", ""),
+                        "image": (product.get("images", [{}])[0].get("src") if product.get("images") else ""),
+                        "price": product.get("price", ""),
+                        "price_html": product.get("price_html", ""),
+                        "regular_price": product.get("regular_price", ""),
+                        "sale_price": product.get("sale_price", ""),
+                        "on_sale": product.get("on_sale", False),
+                        "purchasable": product.get("purchasable", False),
+                        "stock_status": product.get("stock_status", ""),
+                        "stock_quantity": product.get("stock_quantity", 0),
+                        "sku": product.get("sku", ""),
+                        "short_description": product.get("short_description", ""),
+                        "description": product.get("description", ""),
+                        "categories": product.get("categories", []),
+                        "tags": product.get("tags", []),
+                        "brands": product.get("brands", []),
+                        "average_rating": product.get("average_rating", "0.00"),
+                        "rating_count": product.get("rating_count", 0),
+                        "total_sales": product.get("total_sales", 0),
+                        "type": product.get("type", ""),
+                        "featured": product.get("featured", False),
+                        "dimensions": product.get("dimensions", {"length": "", "width": "", "height": ""}),
+                        "weight": product.get("weight", ""),
+                        "virtual": product.get("virtual", False),
+                        "downloadable": product.get("downloadable", False),
+                        "upsell_ids": product.get("upsell_ids", []),
+                        "cross_sell_ids": product.get("cross_sell_ids", []),
+                    }
+                if isinstance(response_data, list):
+                    response_data = [filter_product_fields(p) for p in response_data]
+                elif isinstance(response_data, dict) and response_data.get("id"):
+                    response_data = filter_product_fields(response_data)
+            # --- End filter product fields ---
+
             return {
                 'success': True,
                 'endpoint': endpoint,
